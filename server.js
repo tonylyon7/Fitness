@@ -5,6 +5,12 @@ import morgan from 'morgan';
 import mongoose from 'mongoose';
 import http from 'http';
 import { initializeSocket } from './services/socket.service.js';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get current directory name
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import routes
 import authRoutes from './routes/auth.routes.js';
@@ -14,6 +20,7 @@ import storeRoutes from './routes/store.routes.js';
 import coachRoutes from './routes/coach.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 // Load environment variables from config folder
 dotenv.config({ path: './config/.env' });
@@ -37,6 +44,9 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Serve static files from assets directory
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
+
 // Basic route for testing
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to Fitness API' });
@@ -50,6 +60,7 @@ app.use('/store', storeRoutes);
 app.use('/coaches', coachRoutes);
 app.use('/chat', chatRoutes);
 app.use('/subscription', subscriptionRoutes);
+app.use('/api', uploadRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
