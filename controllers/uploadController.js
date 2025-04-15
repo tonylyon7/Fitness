@@ -1,6 +1,11 @@
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+// Get current directory name
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Create assets directory if it doesn't exist
 const assetsDir = path.join(__dirname, '../assets');
@@ -39,7 +44,7 @@ const upload = multer({
 
 const uploadFile = upload.single('image');
 
-exports.uploadMedia = (req, res) => {
+export const uploadMedia = (req, res) => {
   uploadFile(req, res, function (err) {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {

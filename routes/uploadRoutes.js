@@ -1,9 +1,9 @@
-const express = require('express');
+import express from 'express';
+import { uploadMedia } from '../controllers/uploadController.js';
+
 const router = express.Router();
-const { uploadMedia } = require('../controllers/uploadController');
-const { protect } = require('../middleware/authMiddleware');
 
-// Protected route - only authenticated users can upload
-router.post('/upload', protect, uploadMedia);
+// Allow any user to upload for now
+router.post('/upload', uploadMedia);
 
-module.exports = router;
+export default router;
