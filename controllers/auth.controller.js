@@ -38,17 +38,14 @@ export const signup = async (req, res, next) => {
     await user.save();
 
     res.status(201).json({
-      status: 'success',
-      data: {
-        user: {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-          role: user.role
-        },
-        accessToken,
-        refreshToken
-      }
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role
+      },
+      token: accessToken,
+      refreshToken
     });
   } catch (error) {
     next(error);
@@ -69,17 +66,14 @@ export const login = async (req, res, next) => {
     await user.save();
 
     res.json({
-      status: 'success',
-      data: {
-        user: {
-          id: user._id,
-          email: user.email,
-          name: user.name,
-          role: user.role
-        },
-        accessToken,
-        refreshToken
-      }
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role
+      },
+      token: accessToken,
+      refreshToken
     });
   } catch (error) {
     next(error);
@@ -105,8 +99,8 @@ export const refresh = async (req, res, next) => {
     await user.save();
 
     res.json({
-      status: 'success',
-      data: tokens
+      token: tokens.accessToken,
+      refreshToken: tokens.refreshToken
     });
   } catch (error) {
     next(error);

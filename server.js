@@ -4,6 +4,15 @@ import cors from 'cors';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
 
+// Import routes
+import authRoutes from './routes/auth.routes.js';
+import userRoutes from './routes/user.routes.js';
+import postRoutes from './routes/post.routes.js';
+import storeRoutes from './routes/store.routes.js';
+import coachRoutes from './routes/coach.routes.js';
+import chatRoutes from './routes/chat.routes.js';
+import subscriptionRoutes from './routes/subscription.routes.js';
+
 // Load environment variables from config folder
 dotenv.config({ path: './config/.env' });
 console.log('Environment loaded from config folder');
@@ -23,6 +32,15 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to Fitness API' });
 });
+
+// Routes
+app.use('/auth', authRoutes);
+app.use('/user', userRoutes);
+app.use('/posts', postRoutes);
+app.use('/store', storeRoutes);
+app.use('/coaches', coachRoutes);
+app.use('/chat', chatRoutes);
+app.use('/subscription', subscriptionRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
