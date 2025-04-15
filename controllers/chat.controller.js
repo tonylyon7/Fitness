@@ -1,6 +1,7 @@
 import Conversation from '../models/conversation.model.js';
 import Message from '../models/message.model.js';
 import { ValidationError } from '../utils/errors.js';
+import { getIO } from '../services/socket.service.js';
 
 export const getConversations = async (req, res, next) => {
   try {
@@ -44,7 +45,7 @@ export const getMessages = async (req, res, next) => {
       .limit(limit);
 
     // Mark messages as read
-    await Message.updateMany(
+    const updatedMessages = await Message.updateMany(
       {
         conversation: conversationId,
         'readBy.user': { $ne: req.user._id }
@@ -64,6 +65,20 @@ export const getMessages = async (req, res, next) => {
       { _id: conversationId, 'unreadCounts.user': req.user._id },
       { $set: { 'unreadCounts.$.count': 0 } }
     );
+
+    // Notify other participants that messages were read
+    if (updatedMessages.modifiedCount > 0) {
+      const io = getIO();
+      conversation.participants.forEach(participantId => {
+        if (participantId.toString() !== req.user._id.toString()) {
+          io.to(`user_${participantId}`).emit('messages_read', {
+            conversationId,
+            userId: req.user._id,
+            readAt: new Date()
+          });
+        }
+      });
+    }
 
     const total = await Message.countDocuments({ conversation: conversationId });
 
@@ -133,6 +148,17 @@ export const sendMessage = async (req, res, next) => {
       await message.populate('replyTo');
     }
 
+    // Emit message to all participants in the conversation
+    const io = getIO();
+    conversation.participants.forEach(participantId => {
+      if (participantId.toString() !== req.user._id.toString()) {
+        io.to(`user_${participantId}`).emit('new_message', {
+          conversationId,
+          message
+        });
+      }
+    });
+
     res.status(201).json({
       status: 'success',
       data: { message }
@@ -174,10 +200,17 @@ export const createConversation = async (req, res, next) => {
       unreadCounts: allParticipants.map(userId => ({
         user: userId,
         count: 0
-      }))
+      })),
+      messages: []
     });
 
     await conversation.populate('participants', 'name profilePicture');
+
+    // Notify all participants about the new conversation
+    const io = getIO();
+    allParticipants.forEach(participantId => {
+      io.to(`user_${participantId}`).emit('new_conversation', conversation);
+    });
 
     res.status(201).json({
       status: 'success',

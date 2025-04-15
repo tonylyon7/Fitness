@@ -3,6 +3,8 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import morgan from 'morgan';
 import mongoose from 'mongoose';
+import http from 'http';
+import { initializeSocket } from './services/socket.service.js';
 
 // Import routes
 import authRoutes from './routes/auth.routes.js';
@@ -19,11 +21,18 @@ console.log('Environment loaded from config folder');
 
 // Initialize express app
 const app = express();
+const server = http.createServer(app);
+const io = initializeSocket(server);
 
 const PORT = process.env.PORT || 5000;
 
 // Middlewares
-app.use(cors());
+// Configure CORS
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -93,6 +102,6 @@ const connectDB = async () => {
 connectDB();
 
 // Start server
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
