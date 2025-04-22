@@ -27,6 +27,15 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: ''
   },
+  branch: {
+    type: String,
+    enum: ['main_branch', 'downtown_branch', 'east_end_branch', 'west_end_branch', 'north_branch', 'south_branch'],
+    default: 'main_branch'
+  },
+  job: {
+    type: String,
+    default: ''
+  },
   followers: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'

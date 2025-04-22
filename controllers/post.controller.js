@@ -9,16 +9,16 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Create assets directory if it doesn't exist
-const assetsDir = path.join(__dirname, '../assets');
-if (!fs.existsSync(assetsDir)) {
-  fs.mkdirSync(assetsDir, { recursive: true });
+// Create posts directory if it doesn't exist
+const postsDir = path.join(__dirname, '../assets/posts');
+if (!fs.existsSync(postsDir)) {
+  fs.mkdirSync(postsDir, { recursive: true });
 }
 
 // Configure multer for file upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, assetsDir);
+    cb(null, postsDir);
   },
   filename: function (req, file, cb) {
     // Create unique filename with timestamp and original extension
@@ -89,8 +89,13 @@ export const getFeed = async (req, res, next) => {
 };
 
 export const createPost = (req, res, next) => {
+  console.log('Create post request received');
+  console.log('Request headers:', req.headers);
+  console.log('Request body:', req.body);
+  
   uploadMedia(req, res, async (err) => {
     if (err instanceof multer.MulterError) {
+      console.error('Multer error:', err);
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({ 
           status: 'error',
@@ -102,38 +107,80 @@ export const createPost = (req, res, next) => {
         message: err.message 
       });
     } else if (err) {
+      console.error('Upload error:', err);
       return res.status(400).json({ 
         status: 'error',
         message: err.message 
       });
     }
+    
+    console.log('File upload successful');
+    if (req.file) {
+      console.log('Uploaded file:', req.file);
+    } else {
+      console.log('No file uploaded');
+    }
 
     try {
+      console.log('Processing post data');
       const { content, type = 'general', workoutDetails } = req.body;
-      const mediaUrl = req.file ? `/assets/${req.file.filename}` : null;
+      console.log('Post content:', content);
+      console.log('Post type:', type);
       
-      const post = await Post.create({
-      author: req.user._id,
-      content,
-      media: mediaUrl ? [mediaUrl] : [],
-      type,
-      workoutDetails
-    });
+      // Check if user is available in the request
+      if (!req.user || !req.user._id) {
+        console.error('User not found in request:', req.user);
+        return res.status(401).json({
+          status: 'error',
+          message: 'User authentication failed. Please log in again.'
+        });
+      }
+      
+      console.log('User ID:', req.user._id);
+      
+      const mediaUrl = req.file ? `/assets/posts/${req.file.filename}` : null;
+      console.log('Media URL:', mediaUrl);
+      
+      // Create post object with all required fields
+      const postData = {
+        author: req.user._id,
+        content,
+        media: mediaUrl ? [mediaUrl] : [],
+        type
+      };
+      
+      // Only add workoutDetails if it exists
+      if (workoutDetails) {
+        postData.workoutDetails = workoutDetails;
+      }
+      
+      console.log('Creating post with data:', postData);
+      
+      const post = await Post.create(postData);
+      console.log('Post created successfully:', post._id);
 
       await post.populate('author', 'name profilePicture');
+      console.log('Post populated with author details');
 
       res.status(201).json({
         status: 'success',
         data: { post }
       });
     } catch (error) {
+      console.error('Error creating post:', error);
+      
       // If there's an error, delete the uploaded file
       if (req.file) {
         fs.unlink(req.file.path, (err) => {
           if (err) console.error('Error deleting file:', err);
         });
       }
-      next(error);
+      
+      // Send a more specific error message
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to create post: ' + (error.message || 'Unknown error')
+      });
     }
   });
 };

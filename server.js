@@ -35,11 +35,10 @@ const PORT = process.env.PORT || 5000;
 
 // Middlewares
 // Configure CORS
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
+app.use(cors());
+
+// Enable pre-flight requests for all routes
+app.options('*', cors());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -74,12 +73,13 @@ app.use((err, req, res, next) => {
 // Database connection
 const connectDB = async () => {
   try {
-    if (!process.env.MONGODB_URI) {
-      throw new Error('MONGODB_URI is not defined');
+    const mongoUri = process.env.NODE_ENV === 'production' ? process.env.MONGO_URL : process.env.MONGO_TEST;
+    if (!mongoUri) {
+      throw new Error('MongoDB connection URI is not defined');
     }
 
     // Log connection attempt (safely)
-    const sanitizedUri = process.env.MONGODB_URI.replace(
+    const sanitizedUri = mongoUri.replace(
       /(mongodb\+srv:\/\/[^:]+:)[^@]+(@.*)/,
       '$1[HIDDEN]$2'
     );
@@ -95,7 +95,7 @@ const connectDB = async () => {
       w: 'majority'
     };
 
-    await mongoose.connect(process.env.MONGODB_URI, options);
+    await mongoose.connect(mongoUri, options);
     
     console.log('Connected to MongoDB Atlas successfully!');
     

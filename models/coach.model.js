@@ -7,6 +7,18 @@ const coachSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  branches: [{
+    type: String,
+    required: true,
+    enum: [
+      'main_branch',
+      'downtown_branch',
+      'west_end_branch',
+      'east_end_branch',
+      'north_branch',
+      'south_branch'
+    ]
+  }],
   specializations: [{
     type: String,
     enum: [
@@ -17,7 +29,17 @@ const coachSchema = new mongoose.Schema({
       'crossfit',
       'powerlifting',
       'bodybuilding',
-      'rehabilitation'
+      'rehabilitation',
+      'pilates',
+      'meditation',
+      'martial_arts',
+      'kickboxing',
+      'self_defense',
+      'functional_training',
+      'olympic_lifting',
+      'boxing',
+      'hiit',
+      'strength_conditioning'
     ]
   }],
   experience: {

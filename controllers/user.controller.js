@@ -10,10 +10,10 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res, next) => {
   try {
-    const { name, bio, profilePicture } = req.body;
+    const { name, bio, profilePicture, branch, job } = req.body;
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      { name, bio, profilePicture },
+      { name, bio, profilePicture, branch, job },
       { new: true, runValidators: true }
     ).select('-password -refreshToken');
 
