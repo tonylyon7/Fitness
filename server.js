@@ -23,8 +23,15 @@ import subscriptionRoutes from './routes/subscription.routes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 
 // Load environment variables from config folder
-dotenv.config({ path: './config/.env' });
-console.log('Environment loaded from config folder');
+try {
+  dotenv.config({ path: './config/.env' });
+  console.log('Environment loaded from config folder');
+} catch (error) {
+  console.log('Error loading .env file, will use environment variables if set');
+}
+
+// Log environment mode
+console.log(`Running in ${process.env.NODE_ENV || 'development'} mode`);
 
 // Initialize express app
 const app = express();
@@ -73,9 +80,16 @@ app.use((err, req, res, next) => {
 // Database connection
 const connectDB = async () => {
   try {
-    const mongoUri = process.env.NODE_ENV === 'production' ? process.env.MONGO_URL : process.env.MONGO_TEST;
+    // Get MongoDB URI with fallbacks for different environments
+    let mongoUri = process.env.MONGO_URL || process.env.MONGODB_URI;
+    
+    // If we're not in production and have a test URI, use that instead
+    if (process.env.NODE_ENV !== 'production' && process.env.MONGO_TEST) {
+      mongoUri = process.env.MONGO_TEST;
+    }
+    
     if (!mongoUri) {
-      throw new Error('MongoDB connection URI is not defined');
+      throw new Error('MongoDB connection URI is not defined. Please set MONGO_URL or MONGODB_URI environment variable');
     }
 
     // Log connection attempt (safely)
