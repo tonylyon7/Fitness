@@ -22,6 +22,7 @@ import chatRoutes from './routes/chat.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import usernameRoutes from './routes/username.routes.js';
+import debugRoutes from './routes/debug.routes.js';
 
 // Load environment variables from config folder
 try {
@@ -70,6 +71,8 @@ app.use('/subscription', subscriptionRoutes);
 app.use('/api', uploadRoutes);
 // Register username routes with proper error handling
 app.use('/username', usernameRoutes);
+// Debug routes (only available in development)
+app.use('/debug', debugRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
