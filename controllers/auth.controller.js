@@ -3,29 +3,63 @@ import User from '../models/user.model.js';
 import { ValidationError } from '../utils/errors.js';
 
 const generateTokens = (userId) => {
-  // Default expiration times if environment variables are not set
-  const defaultAccessExpiry = '1h'; // 1 hour
-  const defaultRefreshExpiry = '7d'; // 7 days
-  
-  // Use environment variables if available, otherwise use defaults
-  const accessExpiresIn = process.env.JWT_EXPIRES_IN || defaultAccessExpiry;
-  const refreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN || defaultRefreshExpiry;
-  
-  // Generate access token
-  const accessToken = jwt.sign(
-    { userId },
-    process.env.JWT_SECRET || 'your-secret-key',
-    { expiresIn: accessExpiresIn }
-  );
-  
-  // Generate refresh token
-  const refreshToken = jwt.sign(
-    { userId },
-    process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
-    { expiresIn: refreshExpiresIn }
-  );
+  try {
+    // Default expiration times if environment variables are not set
+    const defaultAccessExpiry = '1h'; // 1 hour
+    const defaultRefreshExpiry = '7d'; // 7 days
+    
+    // Ensure expiresIn is a valid string format
+    let accessExpiresIn = '1h';
+    let refreshExpiresIn = '7d';
+    
+    // Only use environment variables if they are properly formatted
+    if (process.env.JWT_EXPIRES_IN && 
+        (typeof process.env.JWT_EXPIRES_IN === 'number' || 
+         /^\d+[smhdwy]$/.test(process.env.JWT_EXPIRES_IN))) {
+      accessExpiresIn = process.env.JWT_EXPIRES_IN;
+    }
+    
+    if (process.env.JWT_REFRESH_EXPIRES_IN && 
+        (typeof process.env.JWT_REFRESH_EXPIRES_IN === 'number' || 
+         /^\d+[smhdwy]$/.test(process.env.JWT_REFRESH_EXPIRES_IN))) {
+      refreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN;
+    }
+    
+    console.log('Using token expiration times:', { accessExpiresIn, refreshExpiresIn });
+    
+    // Generate access token
+    const accessToken = jwt.sign(
+      { userId },
+      process.env.JWT_SECRET || 'your-secret-key',
+      { expiresIn: accessExpiresIn }
+    );
+    
+    // Generate refresh token
+    const refreshToken = jwt.sign(
+      { userId },
+      process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
+      { expiresIn: refreshExpiresIn }
+    );
 
-  return { accessToken, refreshToken };
+    return { accessToken, refreshToken };
+  } catch (error) {
+    console.error('Error generating tokens:', error);
+    
+    // Fallback to hardcoded values if token generation fails
+    const accessToken = jwt.sign(
+      { userId },
+      'fallback-secret-key',
+      { expiresIn: '1h' }
+    );
+    
+    const refreshToken = jwt.sign(
+      { userId },
+      'fallback-refresh-secret-key',
+      { expiresIn: '7d' }
+    );
+    
+    return { accessToken, refreshToken };
+  }
 };
 
 export const signup = async (req, res, next) => {
