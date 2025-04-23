@@ -324,10 +324,28 @@ const coaches = [
 
 const seedCoaches = async () => {
   try {
-    const mongoUri = process.env.NODE_ENV === 'production' ? process.env.MONGO_URL : process.env.MONGO_TEST;
+    // Get MongoDB URI with fallbacks for different environments
+    let mongoUri = process.env.MONGO_URL || process.env.MONGODB_URI;
+    
+    // If we're not in production and have a test URI, use that instead
+    if (process.env.NODE_ENV !== 'production' && process.env.MONGO_TEST) {
+      mongoUri = process.env.MONGO_TEST;
+    }
+    
     if (!mongoUri) {
       throw new Error('MongoDB connection URI is not defined');
     }
+    
+    // Fix database name case sensitivity issue
+    // Extract the database name from the URI
+    const dbNameMatch = mongoUri.match(/\/([^\/\?]+)(\?|$)/);
+    if (dbNameMatch && dbNameMatch[1]) {
+      const dbName = dbNameMatch[1];
+      // Replace with the correct database name (Fitness with capital F)
+      mongoUri = mongoUri.replace(`/${dbName}`, '/Fitness');
+      console.log(`Adjusted database name in connection string to 'Fitness'`);
+    }
+    
     await mongoose.connect(mongoUri);
     console.log('Connected to MongoDB');
 

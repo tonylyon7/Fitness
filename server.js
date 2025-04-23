@@ -91,6 +91,16 @@ const connectDB = async () => {
     if (!mongoUri) {
       throw new Error('MongoDB connection URI is not defined. Please set MONGO_URL or MONGODB_URI environment variable');
     }
+    
+    // Fix database name case sensitivity issue
+    // Extract the database name from the URI
+    const dbNameMatch = mongoUri.match(/\/([^\/\?]+)(\?|$)/);
+    if (dbNameMatch && dbNameMatch[1]) {
+      const dbName = dbNameMatch[1];
+      // Replace with the correct database name (Fitness with capital F)
+      mongoUri = mongoUri.replace(`/${dbName}`, '/Fitness');
+      console.log(`Using database: Fitness`);
+    }
 
     // Log connection attempt (safely)
     const sanitizedUri = mongoUri.replace(
