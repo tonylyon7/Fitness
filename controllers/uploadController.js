@@ -13,10 +13,31 @@ if (!fs.existsSync(assetsDir)) {
   fs.mkdirSync(assetsDir, { recursive: true });
 }
 
+// Create profile images directory if it doesn't exist
+const profileImagesDir = path.join(assetsDir, 'profileimage');
+if (!fs.existsSync(profileImagesDir)) {
+  fs.mkdirSync(profileImagesDir, { recursive: true });
+}
+
+// Create post images directory if it doesn't exist
+const postImagesDir = path.join(assetsDir, 'postimage');
+if (!fs.existsSync(postImagesDir)) {
+  fs.mkdirSync(postImagesDir, { recursive: true });
+}
+
 // Configure multer for file upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, assetsDir);
+    // Determine the destination directory based on the upload type
+    const type = req.body.type || 'default';
+    
+    if (type === 'profile') {
+      cb(null, profileImagesDir);
+    } else if (type === 'post') {
+      cb(null, postImagesDir);
+    } else {
+      cb(null, assetsDir);
+    }
   },
   filename: function (req, file, cb) {
     // Create unique filename with timestamp and original extension
@@ -71,14 +92,28 @@ export const uploadMedia = (req, res) => {
       });
     }
 
-    // Return the URL for the uploaded file
-    const fileUrl = `/assets/${req.file.filename}`;
+    // Determine the type of upload
+    const type = req.body.type || 'default';
+    
+    // Construct the appropriate URL path based on the upload type
+    let fileUrl;
+    if (type === 'profile') {
+      fileUrl = `/assets/profileimage/${req.file.filename}`;
+    } else if (type === 'post') {
+      fileUrl = `/assets/postimage/${req.file.filename}`;
+    } else {
+      fileUrl = `/assets/${req.file.filename}`;
+    }
+    
+    // Return the URL for the uploaded file in a format compatible with both the backend and frontend
     res.json({
       status: 'success',
       data: {
         imageUrl: fileUrl,
         message: 'File uploaded successfully'
-      }
+      },
+      // Add this for compatibility with the frontend's expected format
+      imagePath: fileUrl
     });
   });
 };
