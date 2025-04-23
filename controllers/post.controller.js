@@ -213,28 +213,79 @@ export const likePost = async (req, res, next) => {
 
 export const commentOnPost = async (req, res, next) => {
   try {
+    console.log('Comment request received:', req.body);
+    console.log('User in request:', req.user);
+    
     const { postId, content } = req.body;
     
-    const post = await Post.findById(postId);
-    if (!post) {
-      throw new ValidationError('Post not found');
+    if (!postId) {
+      console.error('Missing postId in request');
+      return res.status(400).json({
+        status: 'error',
+        message: 'Post ID is required'
+      });
     }
-
-    post.comments.push({
-      author: req.user._id,
-      content
-    });
-
-    await post.save();
-    await post.populate('comments.author', 'name profilePicture');
-
-    const newComment = post.comments[post.comments.length - 1];
-
-    res.status(201).json({
-      status: 'success',
-      data: { comment: newComment }
-    });
+    
+    if (!content) {
+      console.error('Missing content in request');
+      return res.status(400).json({
+        status: 'error',
+        message: 'Comment content is required'
+      });
+    }
+    
+    if (!req.user || !req.user._id) {
+      console.error('User not authenticated properly');
+      return res.status(401).json({
+        status: 'error',
+        message: 'User authentication failed'
+      });
+    }
+    
+    try {
+      const post = await Post.findById(postId);
+      if (!post) {
+        console.error('Post not found:', postId);
+        return res.status(404).json({
+          status: 'error',
+          message: 'Post not found'
+        });
+      }
+      
+      console.log('Found post:', post._id);
+      
+      // Add the comment
+      post.comments.push({
+        author: req.user._id,
+        content
+      });
+      
+      await post.save();
+      console.log('Post saved with new comment');
+      
+      // Populate author details
+      await post.populate('comments.author', 'name profilePicture');
+      console.log('Comment author populated');
+      
+      const newComment = post.comments[post.comments.length - 1];
+      console.log('New comment:', newComment);
+      
+      return res.status(201).json({
+        status: 'success',
+        data: { comment: newComment }
+      });
+    } catch (findError) {
+      console.error('Error finding or updating post:', findError);
+      return res.status(500).json({
+        status: 'error',
+        message: 'Error processing comment: ' + findError.message
+      });
+    }
   } catch (error) {
-    next(error);
+    console.error('Unexpected error in commentOnPost:', error);
+    return res.status(500).json({
+      status: 'error',
+      message: 'Unexpected error: ' + error.message
+    });
   }
 };
