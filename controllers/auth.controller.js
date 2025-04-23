@@ -4,41 +4,21 @@ import { ValidationError } from '../utils/errors.js';
 
 const generateTokens = (userId) => {
   try {
-    // Default expiration times if environment variables are not set
-    const defaultAccessExpiry = '1h'; // 1 hour
-    const defaultRefreshExpiry = '7d'; // 7 days
+    // IMPORTANT: Using hardcoded values to ensure it works
+    // These are completely hardcoded and don't rely on any environment variables
     
-    // Ensure expiresIn is a valid string format
-    let accessExpiresIn = '1h';
-    let refreshExpiresIn = '7d';
-    
-    // Only use environment variables if they are properly formatted
-    if (process.env.JWT_EXPIRES_IN && 
-        (typeof process.env.JWT_EXPIRES_IN === 'number' || 
-         /^\d+[smhdwy]$/.test(process.env.JWT_EXPIRES_IN))) {
-      accessExpiresIn = process.env.JWT_EXPIRES_IN;
-    }
-    
-    if (process.env.JWT_REFRESH_EXPIRES_IN && 
-        (typeof process.env.JWT_REFRESH_EXPIRES_IN === 'number' || 
-         /^\d+[smhdwy]$/.test(process.env.JWT_REFRESH_EXPIRES_IN))) {
-      refreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN;
-    }
-    
-    console.log('Using token expiration times:', { accessExpiresIn, refreshExpiresIn });
-    
-    // Generate access token
+    // Generate access token with hardcoded values
     const accessToken = jwt.sign(
       { userId },
-      process.env.JWT_SECRET || 'your-secret-key',
-      { expiresIn: accessExpiresIn }
+      'hardcoded-secret-key-for-access-token',
+      { expiresIn: 3600 } // 1 hour in seconds
     );
     
-    // Generate refresh token
+    // Generate refresh token with hardcoded values
     const refreshToken = jwt.sign(
       { userId },
-      process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
-      { expiresIn: refreshExpiresIn }
+      'hardcoded-secret-key-for-refresh-token',
+      { expiresIn: 604800 } // 7 days in seconds
     );
 
     return { accessToken, refreshToken };
