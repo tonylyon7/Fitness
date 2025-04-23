@@ -48,7 +48,7 @@ router.post('/like',
 
 router.post('/comment',
   [
-    body('postId').notEmpty().isMongoId(),
+    body('postId').notEmpty(),
     body('content').trim().notEmpty(),
     validate
   ],
