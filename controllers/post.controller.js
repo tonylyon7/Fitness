@@ -242,6 +242,14 @@ export const commentOnPost = async (req, res, next) => {
       });
     }
     
+    // Log the user information for debugging
+    console.log('User making the comment:', {
+      id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      username: req.user.username
+    });
+    
     try {
       // Check if postId is a valid MongoDB ObjectId
       const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(postId);
