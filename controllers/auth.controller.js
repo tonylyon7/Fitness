@@ -3,16 +3,26 @@ import User from '../models/user.model.js';
 import { ValidationError } from '../utils/errors.js';
 
 const generateTokens = (userId) => {
+  // Default expiration times if environment variables are not set
+  const defaultAccessExpiry = '1h'; // 1 hour
+  const defaultRefreshExpiry = '7d'; // 7 days
+  
+  // Use environment variables if available, otherwise use defaults
+  const accessExpiresIn = process.env.JWT_EXPIRES_IN || defaultAccessExpiry;
+  const refreshExpiresIn = process.env.JWT_REFRESH_EXPIRES_IN || defaultRefreshExpiry;
+  
+  // Generate access token
   const accessToken = jwt.sign(
     { userId },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN }
+    process.env.JWT_SECRET || 'your-secret-key',
+    { expiresIn: accessExpiresIn }
   );
   
+  // Generate refresh token
   const refreshToken = jwt.sign(
     { userId },
-    process.env.JWT_REFRESH_SECRET,
-    { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN }
+    process.env.JWT_REFRESH_SECRET || 'your-refresh-secret-key',
+    { expiresIn: refreshExpiresIn }
   );
 
   return { accessToken, refreshToken };
