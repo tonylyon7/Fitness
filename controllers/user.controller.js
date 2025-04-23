@@ -10,10 +10,27 @@ export const getProfile = async (req, res) => {
 
 export const updateProfile = async (req, res, next) => {
   try {
-    const { name, bio, profilePicture, branch, job } = req.body;
+    const { name, bio, profilePicture, branch, job, fitnessLevel } = req.body;
+    
+    // Get the current user to preserve the username
+    const currentUser = await User.findById(req.user._id);
+    if (!currentUser) {
+      throw new ValidationError('User not found');
+    }
+    
+    // Update user while preserving the username
     const updatedUser = await User.findByIdAndUpdate(
       req.user._id,
-      { name, bio, profilePicture, branch, job },
+      { 
+        name, 
+        bio, 
+        profilePicture, 
+        branch, 
+        job,
+        fitnessLevel,
+        // Explicitly preserve the username
+        username: currentUser.username
+      },
       { new: true, runValidators: true }
     ).select('-password -refreshToken');
 
