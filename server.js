@@ -21,6 +21,7 @@ import coachRoutes from './routes/coach.routes.js';
 import chatRoutes from './routes/chat.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import usernameRoutes from './routes/username.routes.js';
 
 // Load environment variables from config folder
 try {
@@ -67,6 +68,8 @@ app.use('/coaches', coachRoutes);
 app.use('/chat', chatRoutes);
 app.use('/subscription', subscriptionRoutes);
 app.use('/api', uploadRoutes);
+// Register username routes with proper error handling
+app.use('/username', usernameRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

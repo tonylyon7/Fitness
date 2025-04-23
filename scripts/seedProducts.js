@@ -524,10 +524,23 @@ const products = generateProducts();
 
 const seedDatabase = async () => {
   try {
-    const mongoUri = process.env.NODE_ENV === 'production' ? process.env.MONGO_URL : process.env.MONGO_TEST;
+    let mongoUri = process.env.NODE_ENV === 'production' ? process.env.MONGO_URL : process.env.MONGO_TEST;
     if (!mongoUri) {
       throw new Error('MongoDB connection URI is not defined');
     }
+    
+    // Fix case sensitivity issue in database name
+    if (mongoUri.includes('mongodb://') || mongoUri.includes('mongodb+srv://')) {
+      // Extract the database name from the URI
+      const dbNameMatch = mongoUri.match(/\/([^/\?]+)(\?|$)/);
+      if (dbNameMatch && dbNameMatch[1]) {
+        const dbName = dbNameMatch[1];
+        // Replace the database name with the correct case
+        mongoUri = mongoUri.replace(`/${dbName}`, '/Fitness');
+        console.log('Adjusted MongoDB URI to use correct database name case');
+      }
+    }
+    
     await mongoose.connect(mongoUri);
     console.log('Connected to MongoDB');
 

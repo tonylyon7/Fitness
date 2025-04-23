@@ -20,17 +20,29 @@ const generateTokens = (userId) => {
 
 export const signup = async (req, res, next) => {
   try {
-    const { email, password, name } = req.body;
+    const { email, password, name, username } = req.body;
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
+    // Check if email exists
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
       throw new ValidationError('Email already exists');
+    }
+    
+    // Check if username exists
+    if (username) {
+      const existingUsername = await User.findOne({ username });
+      if (existingUsername) {
+        throw new ValidationError('Username already exists');
+      }
+    } else {
+      throw new ValidationError('Username is required');
     }
 
     const user = await User.create({
       email,
       password,
-      name
+      name,
+      username
     });
 
     const { accessToken, refreshToken } = generateTokens(user._id);
@@ -42,6 +54,7 @@ export const signup = async (req, res, next) => {
         id: user._id,
         email: user.email,
         name: user.name,
+        username: user.username,
         role: user.role
       },
       token: accessToken,
@@ -70,6 +83,7 @@ export const login = async (req, res, next) => {
         id: user._id,
         email: user.email,
         name: user.name,
+        username: user.username,
         role: user.role
       },
       token: accessToken,

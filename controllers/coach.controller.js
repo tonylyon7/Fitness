@@ -34,7 +34,7 @@ export const getCoaches = async (req, res, next) => {
     }
 
     const coaches = await Coach.find(query)
-      .populate('user', 'name profilePicture')
+      .populate('user', 'name username profilePicture')
       .sort(sortOptions)
       .skip((page - 1) * limit)
       .limit(limit);
@@ -60,8 +60,8 @@ export const getCoaches = async (req, res, next) => {
 export const getCoachById = async (req, res, next) => {
   try {
     const coach = await Coach.findById(req.params.id)
-      .populate('user', 'name profilePicture')
-      .populate('reviews.user', 'name profilePicture');
+      .populate('user', 'name username profilePicture')
+      .populate('reviews.user', 'name username profilePicture');
 
     if (!coach) {
       throw new ValidationError('Coach not found');
@@ -170,7 +170,7 @@ export const getSessions = async (req, res, next) => {
 
     const sessions = await Session.find(query)
       .populate('coach', 'user hourlyRate')
-      .populate('user', 'name profilePicture')
+      .populate('user', 'name username profilePicture')
       .sort({ date: 1, startTime: 1 });
 
     res.json({
