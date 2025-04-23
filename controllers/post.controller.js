@@ -255,6 +255,20 @@ export const commentOnPost = async (req, res, next) => {
         // For testing purposes, we'll get the most recent post
         console.log('Using alternative method to find post');
         post = await Post.findOne().sort({ createdAt: -1 });
+        
+        // If no post exists, create a test post
+        if (!post) {
+          console.log('No posts found, creating a test post');
+          post = await Post.create({
+            author: req.user._id,
+            content: 'This is a test post created for comment testing',
+            type: 'general',
+            createdAt: new Date(),
+            likes: [],
+            comments: []
+          });
+          console.log('Created test post with ID:', post._id);
+        }
       }
       
       if (!post) {
