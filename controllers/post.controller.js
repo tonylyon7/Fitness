@@ -290,12 +290,15 @@ export const commentOnPost = async (req, res, next) => {
       await post.save();
       console.log('Post saved with new comment');
       
-      // Populate author details
-      await post.populate('comments.author', 'name profilePicture');
-      console.log('Comment author populated');
+      // Populate author details with more fields
+      await post.populate({
+        path: 'comments.author',
+        select: 'name profilePicture email username'
+      });
       
       const newComment = post.comments[post.comments.length - 1];
-      console.log('New comment:', newComment);
+      console.log('New comment with author details:', JSON.stringify(newComment, null, 2));
+      console.log('Comment author details:', JSON.stringify(newComment.author, null, 2));
       
       return res.status(201).json({
         status: 'success',

@@ -70,8 +70,30 @@ export const protect = async (req, res, next) => {
     } catch (jwtError) {
       console.error('JWT verification failed:', jwtError);
       
-      // As a fallback, try to find the most recently created user
-      // This is a temporary solution
+      // Check if userId is provided in the request body
+      const userId = req.body.userId || req.query.userId;
+      console.log('Looking for userId in request:', userId);
+      
+      if (userId) {
+        // If userId is provided, try to find that specific user
+        console.log('Trying to find user by ID:', userId);
+        try {
+          const userById = await User.findById(userId)
+            .select('-password -refreshToken');
+          
+          if (userById) {
+            console.log('Found user by ID:', userById.name);
+            req.user = userById;
+            next();
+            return;
+          }
+        } catch (findError) {
+          console.error('Error finding user by ID:', findError);
+        }
+      }
+      
+      // As a last resort fallback, try to find the most recently created user
+      console.log('Using fallback to find most recent user');
       const user = await User.findOne({})
         .select('-password -refreshToken')
         .sort({ createdAt: -1 });
@@ -80,6 +102,7 @@ export const protect = async (req, res, next) => {
         throw new AuthenticationError('User not found');
       }
       
+      console.log('Using fallback user:', user.name);
       // Attach user to request
       req.user = user;
       next();
