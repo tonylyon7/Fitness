@@ -40,7 +40,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+    fileSize: 25 * 1024 * 1024 // 25MB limit - increased from 10MB
   }
 });
 
@@ -91,7 +91,12 @@ export const getFeed = async (req, res, next) => {
 export const createPost = (req, res, next) => {
   console.log('Create post request received');
   console.log('Request headers:', req.headers);
-  console.log('Request body:', req.body);
+  console.log('Content type:', req.headers['content-type']);
+  console.log('Content length:', req.headers['content-length']);
+  console.log('Request body keys:', req.body ? Object.keys(req.body) : 'No body');
+  
+  // Set a longer timeout for the request (2 minutes)
+  req.setTimeout(120000);
   
   uploadMedia(req, res, async (err) => {
     if (err instanceof multer.MulterError) {
@@ -99,7 +104,7 @@ export const createPost = (req, res, next) => {
       if (err.code === 'LIMIT_FILE_SIZE') {
         return res.status(400).json({ 
           status: 'error',
-          message: 'File size is too large. Max size is 10MB.'
+          message: 'File size is too large. Max size is 25MB.'
         });
       }
       return res.status(400).json({ 
@@ -111,6 +116,15 @@ export const createPost = (req, res, next) => {
       return res.status(400).json({ 
         status: 'error',
         message: err.message 
+      });
+    }
+    
+    // Log file information if available
+    if (req.file) {
+      console.log('File details:', {
+        filename: req.file.filename,
+        size: req.file.size,
+        mimetype: req.file.mimetype
       });
     }
     
