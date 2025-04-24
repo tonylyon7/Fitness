@@ -8,7 +8,8 @@ const postSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: true,
+    required: false, // Make content optional to allow image-only posts
+    default: '',
     trim: true
   },
   media: [{

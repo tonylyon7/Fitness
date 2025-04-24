@@ -117,10 +117,16 @@ export const createPost = async (req, res) => {
     
     // Extract data with defaults and validation
     const { content = '', type = 'general', workoutDetails, mediaUrls = [] } = req.body;
-    const userId = req.user.id;
+    
+    // Ensure mediaUrls is always an array
+    const processedMediaUrls = Array.isArray(mediaUrls) ? mediaUrls : 
+      (mediaUrls ? [mediaUrls] : []);
+    
+    // Get user ID safely
+    const userId = req.user?.id || req.user?._id;
     
     console.log(`Processing post from user ${userId} with content type ${type}`);
-    console.log('Media URLs received:', mediaUrls);
+    console.log('Media URLs received:', processedMediaUrls);
     
     // Check if user is available in the request
     if (!req.user || !req.user._id) {
@@ -132,7 +138,7 @@ export const createPost = async (req, res) => {
     }
     
     // Validate that we have either content or media
-    if (!content && (!mediaUrls || mediaUrls.length === 0)) {
+    if ((!content || content.trim() === '') && (!processedMediaUrls || processedMediaUrls.length === 0)) {
       console.error('Post must have either content or media');
       return res.status(400).json({
         status: 'error',
@@ -146,12 +152,12 @@ export const createPost = async (req, res) => {
     // Create post object with the current user's ID as the author
     const post = new Post({
         author: req.user._id, // Use req.user._id to ensure correct author
-        content,
+        content: content || '', // Ensure content is never undefined
         type,
-        media: mediaUrls
+        media: processedMediaUrls // Use the processed media URLs
       });
       
-      console.log('Saving post with media:', mediaUrls.length > 0 ? mediaUrls : 'No media');
+      console.log('Saving post with media:', processedMediaUrls.length > 0 ? processedMediaUrls : 'No media');
       console.log('Author ID:', req.user._id);
       console.log('Author info:', {
         id: req.user._id,
@@ -164,15 +170,28 @@ export const createPost = async (req, res) => {
         post.workoutDetails = workoutDetails;
       }
       
-      console.log('Creating post with data:', post);
+      console.log('Creating post with data:', JSON.stringify(post, null, 2));
       
-      const savedPost = await post.save();
-      console.log('Post created successfully:', savedPost._id);
+      // Save the post and handle any errors
+      let savedPost;
+      try {
+        savedPost = await post.save();
+        console.log('Post created successfully:', savedPost._id);
+      } catch (saveError) {
+        console.error('Error saving post:', saveError);
+        console.error('Validation errors:', saveError.errors);
+        return res.status(500).json({
+          status: 'error',
+          message: 'Failed to save post: ' + (saveError.message || 'Unknown error'),
+          details: saveError.errors
+        });
+      }
 
       // Populate author with more fields for better frontend display
       await savedPost.populate({
         path: 'author',
-        select: 'name profilePicture email username'
+        select: 'name profilePicture email username',
+        options: { new: true }
       });
       console.log('Post populated with author details:', JSON.stringify(savedPost.author, null, 2));
 
