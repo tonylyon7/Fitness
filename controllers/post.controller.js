@@ -99,40 +99,29 @@ export const createPost = async (req, res) => {
   // Set a longer timeout for the request (2 minutes)
   req.setTimeout(120000);
   
-  uploadMedia(req, res, async (err) => {
-    if (err) {
-      console.error('Multer error:', err);
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ message: 'File size too large. Maximum file size is 200MB.' });
-      }
-      return res.status(400).json({ message: err.message });
+  try {
+    console.log('Request body:', req.body);
+    
+    const { content, type = 'general', workoutDetails, mediaUrls = [] } = req.body;
+    const userId = req.user.id;
+    
+    console.log(`Processing post from user ${userId} with content type ${type}`);
+    console.log('Media URLs received:', mediaUrls);
+    
+    // Check if user is available in the request
+    if (!req.user || !req.user._id) {
+      console.error('User not found in request:', req.user);
+      return res.status(401).json({
+        status: 'error',
+        message: 'User authentication failed. Please log in again.'
+      });
     }
-
-    try {
-      console.log('Request body:', req.body);
-      console.log('Files received:', req.files ? req.files.length : 0);
-      
-      const { content, type = 'general', workoutDetails } = req.body;
-      const userId = req.user.id;
-      
-      console.log(`Processing post from user ${userId} with content type ${type}`);
-      
-      // Check if user is available in the request
-      if (!req.user || !req.user._id) {
-        console.error('User not found in request:', req.user);
-        return res.status(401).json({
-          status: 'error',
-          message: 'User authentication failed. Please log in again.'
-        });
-      }
-      
-      console.log('User ID:', req.user._id);
-      
-      const mediaUrls = req.files ? req.files.map(file => `/assets/postimage/${file.filename}`) : [];
-      console.log('Media URLs:', mediaUrls);
-      
-      // Create post object
-      const post = new Post({
+    
+    console.log('User ID:', req.user._id);
+    console.log('Media URLs:', mediaUrls);
+    
+    // Create post object
+    const post = new Post({
         author: userId,
         content,
         type,
@@ -168,7 +157,6 @@ export const createPost = async (req, res) => {
         message: 'Failed to create post: ' + (error.message || 'Unknown error')
       });
     }
-  });
 };
 
 export const likePost = async (req, res, next) => {

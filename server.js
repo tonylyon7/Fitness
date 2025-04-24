@@ -86,6 +86,24 @@ app.use('/assets', express.static(path.join(__dirname, 'assets')));
 // Configure upload routes with correct path
 app.use('/uploads', uploadRoutes);
 
+// Log all registered routes for debugging
+console.log('Registered routes:');
+app._router.stack.forEach(middleware => {
+  if (middleware.route) {
+    // Routes registered directly on the app
+    console.log(`${Object.keys(middleware.route.methods)} ${middleware.route.path}`);
+  } else if (middleware.name === 'router') {
+    // Router middleware
+    middleware.handle.stack.forEach(handler => {
+      if (handler.route) {
+        const path = handler.route.path;
+        const methods = Object.keys(handler.route.methods);
+        console.log(`${methods} ${middleware.regexp} ${path}`);
+      }
+    });
+  }
+});
+
 // Basic route for testing
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to Fitness API' });
