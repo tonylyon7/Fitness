@@ -25,24 +25,58 @@ if (!fs.existsSync(postImagesDir)) {
   fs.mkdirSync(postImagesDir, { recursive: true });
 }
 
+// Create product images directories if they don't exist
+const productImagesDir = path.join(assetsDir, 'products');
+if (!fs.existsSync(productImagesDir)) {
+  fs.mkdirSync(productImagesDir, { recursive: true });
+}
+
+// Create product category subdirectories
+const productCategories = ['equipment', 'supplements', 'apparel', 'accessories'];
+productCategories.forEach(category => {
+  const categoryDir = path.join(productImagesDir, category);
+  if (!fs.existsSync(categoryDir)) {
+    fs.mkdirSync(categoryDir, { recursive: true });
+  }
+});
+
+// Create coaches directory if it doesn't exist
+const coachesImagesDir = path.join(assetsDir, 'coaches');
+if (!fs.existsSync(coachesImagesDir)) {
+  fs.mkdirSync(coachesImagesDir, { recursive: true });
+}
+
 // Configure multer for file upload
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
     // Determine the destination directory based on the upload type
     const type = req.body.type || 'default';
+    const category = req.body.category || '';
     
     if (type === 'profile') {
       cb(null, profileImagesDir);
     } else if (type === 'post') {
       cb(null, postImagesDir);
+    } else if (type === 'product') {
+      // If a valid category is provided, use the category subdirectory
+      if (category && productCategories.includes(category)) {
+        cb(null, path.join(productImagesDir, category));
+      } else {
+        cb(null, productImagesDir);
+      }
+    } else if (type === 'coach') {
+      cb(null, coachesImagesDir);
     } else {
       cb(null, assetsDir);
     }
   },
   filename: function (req, file, cb) {
-    // Create unique filename with timestamp and original extension
+    // Get the upload type and use it as a prefix
+    const type = req.body.type || 'default';
+    
+    // Create unique filename with type prefix, timestamp and original extension
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    cb(null, `${type}_${uniqueSuffix}${path.extname(file.originalname)}`);
   }
 });
 
@@ -63,7 +97,7 @@ const upload = multer({
   }
 });
 
-const uploadFile = upload.single('image');
+const uploadFile = upload.single('media');
 
 export const uploadMedia = (req, res) => {
   uploadFile(req, res, function (err) {
@@ -94,6 +128,7 @@ export const uploadMedia = (req, res) => {
 
     // Determine the type of upload
     const type = req.body.type || 'default';
+    const category = req.body.category || '';
     
     // Construct the appropriate URL path based on the upload type
     let fileUrl;
@@ -101,6 +136,14 @@ export const uploadMedia = (req, res) => {
       fileUrl = `/assets/profileimage/${req.file.filename}`;
     } else if (type === 'post') {
       fileUrl = `/assets/postimage/${req.file.filename}`;
+    } else if (type === 'product') {
+      if (category && productCategories.includes(category)) {
+        fileUrl = `/assets/products/${category}/${req.file.filename}`;
+      } else {
+        fileUrl = `/assets/products/${req.file.filename}`;
+      }
+    } else if (type === 'coach') {
+      fileUrl = `/assets/coaches/${req.file.filename}`;
     } else {
       fileUrl = `/assets/${req.file.filename}`;
     }
@@ -110,10 +153,18 @@ export const uploadMedia = (req, res) => {
       status: 'success',
       data: {
         imageUrl: fileUrl,
-        message: 'File uploaded successfully'
+        message: 'File uploaded successfully',
+        filename: req.file.filename,
+        type: type,
+        category: category || undefined,
+        size: req.file.size,
+        mimetype: req.file.mimetype
       },
-      // Add this for compatibility with the frontend's expected format
-      imagePath: fileUrl
+      // Add these for compatibility with different frontend expectations
+      imageUrl: fileUrl,
+      imagePath: fileUrl,
+      url: fileUrl,
+      path: fileUrl
     });
   });
 };
