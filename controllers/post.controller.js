@@ -103,7 +103,8 @@ export const createPost = async (req, res) => {
   try {
     console.log('Request body:', req.body);
     
-    const { content, type = 'general', workoutDetails, mediaUrls = [] } = req.body;
+    // Extract data with defaults and validation
+    const { content = '', type = 'general', workoutDetails, mediaUrls = [] } = req.body;
     const userId = req.user.id;
     
     console.log(`Processing post from user ${userId} with content type ${type}`);
@@ -115,6 +116,15 @@ export const createPost = async (req, res) => {
       return res.status(401).json({
         status: 'error',
         message: 'User authentication failed. Please log in again.'
+      });
+    }
+    
+    // Validate that we have either content or media
+    if (!content && (!mediaUrls || mediaUrls.length === 0)) {
+      console.error('Post must have either content or media');
+      return res.status(400).json({
+        status: 'error',
+        message: 'Post must have either content or media'
       });
     }
     
@@ -155,9 +165,9 @@ export const createPost = async (req, res) => {
     } catch (error) {
       console.error('Error creating post:', error);
       console.error('Error stack:', error.stack);
-      res.status(500).json({ message: 'Server error: ' + error.message });
-      // Send a more specific error message
-      res.status(500).json({
+      
+      // Send a single error response with detailed information
+      return res.status(500).json({
         status: 'error',
         message: 'Failed to create post: ' + (error.message || 'Unknown error')
       });
