@@ -37,7 +37,9 @@ console.log(`Running in ${process.env.NODE_ENV || 'development'} mode`);
 
 // Initialize express app
 const app = express();
-const server = http.createServer(app);
+const server = http.createServer({
+  timeout: 300000 // 5 minutes timeout
+}, app);
 const io = initializeSocket(server);
 
 const PORT = process.env.PORT || 5000;
@@ -146,3 +148,6 @@ connectDB();
 server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// Increase timeout for all requests
+server.timeout = 300000; // 5 minutes

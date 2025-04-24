@@ -40,11 +40,11 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 25 * 1024 * 1024 // 25MB limit - increased from 10MB
+    fileSize: 50 * 1024 * 1024 // 50MB limit
   }
 });
 
-const uploadMedia = upload.single('media');
+const uploadMedia = upload.array('media', 5);
 
 export const getFeed = async (req, res, next) => {
   try {
@@ -88,9 +88,9 @@ export const getFeed = async (req, res, next) => {
   }
 };
 
-export const createPost = (req, res, next) => {
+export const createPost = async (req, res) => {
   console.log('Create post request received');
-  console.log('Request headers:', req.headers);
+  console.log('Headers:', req.headers);
   console.log('Content type:', req.headers['content-type']);
   console.log('Content length:', req.headers['content-length']);
   console.log('Request body keys:', req.body ? Object.keys(req.body) : 'No body');
@@ -99,47 +99,22 @@ export const createPost = (req, res, next) => {
   req.setTimeout(120000);
   
   uploadMedia(req, res, async (err) => {
-    if (err instanceof multer.MulterError) {
+    if (err) {
       console.error('Multer error:', err);
       if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ 
-          status: 'error',
-          message: 'File size is too large. Max size is 25MB.'
-        });
+        return res.status(400).json({ message: 'File size too large. Maximum file size is 50MB.' });
       }
-      return res.status(400).json({ 
-        status: 'error',
-        message: err.message 
-      });
-    } else if (err) {
-      console.error('Upload error:', err);
-      return res.status(400).json({ 
-        status: 'error',
-        message: err.message 
-      });
-    }
-    
-    // Log file information if available
-    if (req.file) {
-      console.log('File details:', {
-        filename: req.file.filename,
-        size: req.file.size,
-        mimetype: req.file.mimetype
-      });
-    }
-    
-    console.log('File upload successful');
-    if (req.file) {
-      console.log('Uploaded file:', req.file);
-    } else {
-      console.log('No file uploaded');
+      return res.status(400).json({ message: err.message });
     }
 
     try {
-      console.log('Processing post data');
+      console.log('Request body:', req.body);
+      console.log('Files received:', req.files ? req.files.length : 0);
+      
       const { content, type = 'general', workoutDetails } = req.body;
-      console.log('Post content:', content);
-      console.log('Post type:', type);
+      const userId = req.user.id;
+      
+      console.log(`Processing post from user ${userId} with content type ${type}`);
       
       // Check if user is available in the request
       if (!req.user || !req.user._id) {
@@ -152,44 +127,40 @@ export const createPost = (req, res, next) => {
       
       console.log('User ID:', req.user._id);
       
-      const mediaUrl = req.file ? `/assets/posts/${req.file.filename}` : null;
-      console.log('Media URL:', mediaUrl);
+      const mediaUrls = req.files ? req.files.map(file => `/assets/posts/${file.filename}`) : [];
+      console.log('Media URLs:', mediaUrls);
       
-      // Create post object with all required fields
-      const postData = {
-        author: req.user._id,
+      // Create post object
+      const post = new Post({
+        author: userId,
         content,
-        media: mediaUrl ? [mediaUrl] : [],
-        type
-      };
+        type,
+        media: mediaUrls
+      });
+      
+      console.log('Saving post with media:', mediaUrls.length > 0 ? mediaUrls : 'No media');
       
       // Only add workoutDetails if it exists
       if (workoutDetails) {
-        postData.workoutDetails = workoutDetails;
+        post.workoutDetails = workoutDetails;
       }
       
-      console.log('Creating post with data:', postData);
+      console.log('Creating post with data:', post);
       
-      const post = await Post.create(postData);
-      console.log('Post created successfully:', post._id);
+      const savedPost = await post.save();
+      console.log('Post created successfully:', savedPost._id);
 
-      await post.populate('author', 'name profilePicture');
+      await savedPost.populate('author', 'name profilePicture');
       console.log('Post populated with author details');
 
       res.status(201).json({
         status: 'success',
-        data: { post }
+        data: { post: savedPost }
       });
     } catch (error) {
       console.error('Error creating post:', error);
-      
-      // If there's an error, delete the uploaded file
-      if (req.file) {
-        fs.unlink(req.file.path, (err) => {
-          if (err) console.error('Error deleting file:', err);
-        });
-      }
-      
+      console.error('Error stack:', error.stack);
+      res.status(500).json({ message: 'Server error: ' + error.message });
       // Send a more specific error message
       res.status(500).json({
         status: 'error',
