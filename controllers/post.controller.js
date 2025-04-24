@@ -131,7 +131,7 @@ export const createPost = async (req, res) => {
     console.log('User ID:', req.user._id);
     console.log('Media URLs:', mediaUrls);
     
-    // Create post object
+    // Create post object with the current user's ID as the author
     const post = new Post({
         author: req.user._id, // Use req.user._id to ensure correct author
         content,
@@ -140,6 +140,12 @@ export const createPost = async (req, res) => {
       });
       
       console.log('Saving post with media:', mediaUrls.length > 0 ? mediaUrls : 'No media');
+      console.log('Author ID:', req.user._id);
+      console.log('Author info:', {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email
+      });
       
       // Only add workoutDetails if it exists
       if (workoutDetails) {
@@ -156,7 +162,7 @@ export const createPost = async (req, res) => {
         path: 'author',
         select: 'name profilePicture email username'
       });
-      console.log('Post populated with author details:', savedPost.author);
+      console.log('Post populated with author details:', JSON.stringify(savedPost.author, null, 2));
 
       res.status(201).json({
         status: 'success',
