@@ -53,25 +53,20 @@ export const getFeed = async (req, res, next) => {
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    // Get posts from users that the current user follows and their own posts
-    const posts = await Post.find({
-      $or: [
-        { author: { $in: req.user.following } },
-        { author: req.user._id }
-      ]
-    })
+    console.log('Fetching all posts for feed...');
+    
+    // Get all posts from all users
+    const posts = await Post.find({})
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate('author', 'name profilePicture')
       .populate('comments.author', 'name profilePicture');
 
-    const total = await Post.countDocuments({
-      $or: [
-        { author: { $in: req.user.following } },
-        { author: req.user._id }
-      ]
-    });
+    console.log(`Found ${posts.length} posts`);
+    
+    // Count total posts
+    const total = await Post.countDocuments({});
 
     res.json({
       status: 'success',
