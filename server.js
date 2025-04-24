@@ -51,8 +51,8 @@ app.use(cors());
 // Enable pre-flight requests for all routes
 app.options('*', cors());
 app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
 // Serve static files from assets directory
 app.use('/assets', express.static(path.join(__dirname, 'assets')));

@@ -29,10 +29,11 @@ const storage = multer.diskStorage({
 
 // File filter to accept only images and videos
 const fileFilter = (req, file, cb) => {
+  // Accept images and videos
   if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('video/')) {
     cb(null, true);
   } else {
-    cb(new Error('Only images and videos are allowed!'), false);
+    cb(new Error('Only image and video files are allowed'), false);
   }
 };
 
@@ -40,7 +41,7 @@ const upload = multer({
   storage: storage,
   fileFilter: fileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024 // 50MB limit
+    fileSize: 200 * 1024 * 1024 // 200MB limit
   }
 });
 
@@ -102,7 +103,7 @@ export const createPost = async (req, res) => {
     if (err) {
       console.error('Multer error:', err);
       if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ message: 'File size too large. Maximum file size is 50MB.' });
+        return res.status(400).json({ message: 'File size too large. Maximum file size is 200MB.' });
       }
       return res.status(400).json({ message: err.message });
     }
