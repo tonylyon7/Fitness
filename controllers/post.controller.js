@@ -55,19 +55,31 @@ export const getFeed = async (req, res, next) => {
 
     console.log('Fetching all posts for feed...');
     
-    // Get all posts from all users
+    // Get all posts from all users with full author information
     const posts = await Post.find({})
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
       .populate({
         path: 'author',
-        select: 'name profilePicture email username'
+        select: 'name profilePicture email username',
+        // Ensure we're getting the most up-to-date user information
+        options: { new: true }
       })
       .populate({
         path: 'comments.author',
-        select: 'name profilePicture email username'
+        select: 'name profilePicture email username',
+        options: { new: true }
       });
+      
+    // Log each post's author information for debugging
+    posts.forEach(post => {
+      console.log(`Post ${post._id} author:`, {
+        id: post.author?._id,
+        name: post.author?.name,
+        email: post.author?.email
+      });
+    });
 
     console.log(`Found ${posts.length} posts`);
     
