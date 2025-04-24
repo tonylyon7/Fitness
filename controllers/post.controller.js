@@ -60,8 +60,14 @@ export const getFeed = async (req, res, next) => {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('author', 'name profilePicture')
-      .populate('comments.author', 'name profilePicture');
+      .populate({
+        path: 'author',
+        select: 'name profilePicture email username'
+      })
+      .populate({
+        path: 'comments.author',
+        select: 'name profilePicture email username'
+      });
 
     console.log(`Found ${posts.length} posts`);
     
@@ -117,7 +123,7 @@ export const createPost = async (req, res) => {
     
     // Create post object
     const post = new Post({
-        author: userId,
+        author: req.user._id, // Use req.user._id to ensure correct author
         content,
         type,
         media: mediaUrls
@@ -135,8 +141,12 @@ export const createPost = async (req, res) => {
       const savedPost = await post.save();
       console.log('Post created successfully:', savedPost._id);
 
-      await savedPost.populate('author', 'name profilePicture');
-      console.log('Post populated with author details');
+      // Populate author with more fields for better frontend display
+      await savedPost.populate({
+        path: 'author',
+        select: 'name profilePicture email username'
+      });
+      console.log('Post populated with author details:', savedPost.author);
 
       res.status(201).json({
         status: 'success',
