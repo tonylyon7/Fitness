@@ -80,8 +80,34 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '200mb' }));
 app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 
-// Serve static files from assets directory
-app.use('/assets', express.static(path.join(__dirname, 'assets')));
+// Serve static files from assets directory with improved configuration
+app.use('/assets', express.static(path.join(__dirname, 'assets'), {
+  maxAge: '1d', // Cache for 1 day
+  etag: true,
+  lastModified: true,
+  fallthrough: true, // Continue to next middleware if file not found
+  index: false // Disable directory listing
+}));
+
+// Add a specific route for debugging image access
+app.get('/check-image/:folder/:filename', (req, res) => {
+  const { folder, filename } = req.params;
+  const imagePath = path.join(__dirname, 'assets', folder, filename);
+  
+  if (fs.existsSync(imagePath)) {
+    res.json({
+      exists: true,
+      path: imagePath,
+      size: fs.statSync(imagePath).size + ' bytes'
+    });
+  } else {
+    res.status(404).json({
+      exists: false,
+      path: imagePath,
+      searchedIn: path.join(__dirname, 'assets', folder)
+    });
+  }
+});
 
 // Configure upload routes with correct path
 app.use('/uploads', uploadRoutes);
