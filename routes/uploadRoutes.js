@@ -1,5 +1,11 @@
 import express from 'express';
-import { uploadMedia } from '../controllers/uploadController.js';
+import { 
+  uploadMedia, 
+  uploadProfileImage, 
+  uploadPostMedia, 
+  uploadProductImage, 
+  uploadCoachImage 
+} from '../controllers/uploadController.js';
 
 const router = express.Router();
 
@@ -7,9 +13,9 @@ const router = express.Router();
 router.post('/upload', uploadMedia);
 
 // Dedicated endpoints for different types of uploads (no authentication required)
-router.post('/profile', uploadMedia); // For profile pictures
-router.post('/post', uploadMedia);     // For post images/videos
-router.post('/product', uploadMedia);  // For product images
-router.post('/coach', uploadMedia);    // For coach profile images
+router.post('/profile', uploadProfileImage); // For profile pictures
+router.post('/post', uploadPostMedia);       // For post images/videos
+router.post('/product', uploadProductImage); // For product images
+router.post('/coach', uploadCoachImage);     // For coach profile images
 
 export default router;

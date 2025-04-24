@@ -7,10 +7,36 @@ import http from 'http';
 import { initializeSocket } from './services/socket.service.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import fs from 'fs';
 
 // Get current directory name
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Create necessary directories for file uploads
+const createUploadDirectories = () => {
+  const directories = [
+    path.join(__dirname, 'assets'),
+    path.join(__dirname, 'assets/profileimage'),
+    path.join(__dirname, 'assets/postimage'),
+    path.join(__dirname, 'assets/products'),
+    path.join(__dirname, 'assets/products/equipment'),
+    path.join(__dirname, 'assets/products/supplements'),
+    path.join(__dirname, 'assets/products/apparel'),
+    path.join(__dirname, 'assets/products/accessories'),
+    path.join(__dirname, 'assets/coaches')
+  ];
+  
+  directories.forEach(dir => {
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`Created directory: ${dir}`);
+    }
+  });
+};
+
+// Create all required directories on startup
+createUploadDirectories();
 
 // Import routes
 import authRoutes from './routes/auth.routes.js';
@@ -57,6 +83,9 @@ app.use(express.urlencoded({ extended: true, limit: '200mb' }));
 // Serve static files from assets directory
 app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
+// Configure upload routes with correct path
+app.use('/uploads', uploadRoutes);
+
 // Basic route for testing
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to Fitness API' });
@@ -70,6 +99,7 @@ app.use('/store', storeRoutes);
 app.use('/coaches', coachRoutes);
 app.use('/chat', chatRoutes);
 app.use('/subscription', subscriptionRoutes);
+// Legacy upload route - keeping for backward compatibility
 app.use('/api', uploadRoutes);
 // Register username routes with proper error handling
 app.use('/username', usernameRoutes);

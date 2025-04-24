@@ -10,7 +10,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Create posts directory if it doesn't exist
-const postsDir = path.join(__dirname, '../assets/posts');
+const postsDir = path.join(__dirname, '../assets/postimage');
 if (!fs.existsSync(postsDir)) {
   fs.mkdirSync(postsDir, { recursive: true });
 }
@@ -23,7 +23,7 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     // Create unique filename with timestamp and original extension
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    cb(null, 'post_' + uniqueSuffix + path.extname(file.originalname));
   }
 });
 
@@ -128,7 +128,7 @@ export const createPost = async (req, res) => {
       
       console.log('User ID:', req.user._id);
       
-      const mediaUrls = req.files ? req.files.map(file => `/assets/posts/${file.filename}`) : [];
+      const mediaUrls = req.files ? req.files.map(file => `/assets/postimage/${file.filename}`) : [];
       console.log('Media URLs:', mediaUrls);
       
       // Create post object

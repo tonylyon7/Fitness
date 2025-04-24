@@ -99,33 +99,126 @@ const upload = multer({
 
 const uploadFile = upload.single('media');
 
+// Generic error handler for upload errors
+const handleUploadError = (err, req, res) => {
+  if (err instanceof multer.MulterError) {
+    if (err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({ 
+        status: 'error',
+        message: 'File size is too large. Max size is 200MB.'
+      });
+    }
+    return res.status(400).json({ 
+      status: 'error',
+      message: err.message 
+    });
+  } else if (err) {
+    return res.status(400).json({ 
+      status: 'error',
+      message: err.message 
+    });
+  }
+
+  if (!req.file) {
+    return res.status(400).json({ 
+      status: 'error',
+      message: 'No file uploaded'
+    });
+  }
+  
+  return null; // No error
+};
+
+// Generic success response for uploads
+const sendSuccessResponse = (req, res, fileUrl, type, category) => {
+  res.json({
+    status: 'success',
+    data: {
+      imageUrl: fileUrl,
+      message: 'File uploaded successfully',
+      filename: req.file.filename,
+      type: type,
+      category: category || undefined,
+      size: req.file.size,
+      mimetype: req.file.mimetype
+    },
+    // Add these for compatibility with different frontend expectations
+    imageUrl: fileUrl,
+    imagePath: fileUrl,
+    url: fileUrl,
+    path: fileUrl
+  });
+};
+
+// Upload profile image
+export const uploadProfileImage = (req, res) => {
+  // Force the type to be 'profile'
+  req.body.type = 'profile';
+  
+  uploadFile(req, res, function (err) {
+    const error = handleUploadError(err, req, res);
+    if (error !== null) return; // Error already handled
+    
+    const fileUrl = `/assets/profileimage/${req.file.filename}`;
+    sendSuccessResponse(req, res, fileUrl, 'profile');
+  });
+};
+
+// Upload post image/video
+export const uploadPostMedia = (req, res) => {
+  // Force the type to be 'post'
+  req.body.type = 'post';
+  
+  uploadFile(req, res, function (err) {
+    const error = handleUploadError(err, req, res);
+    if (error !== null) return; // Error already handled
+    
+    const fileUrl = `/assets/postimage/${req.file.filename}`;
+    sendSuccessResponse(req, res, fileUrl, 'post');
+  });
+};
+
+// Upload product image
+export const uploadProductImage = (req, res) => {
+  // Force the type to be 'product'
+  req.body.type = 'product';
+  const category = req.body.category || '';
+  
+  uploadFile(req, res, function (err) {
+    const error = handleUploadError(err, req, res);
+    if (error !== null) return; // Error already handled
+    
+    let fileUrl;
+    if (category && productCategories.includes(category)) {
+      fileUrl = `/assets/products/${category}/${req.file.filename}`;
+    } else {
+      fileUrl = `/assets/products/${req.file.filename}`;
+    }
+    
+    sendSuccessResponse(req, res, fileUrl, 'product', category);
+  });
+};
+
+// Upload coach image
+export const uploadCoachImage = (req, res) => {
+  // Force the type to be 'coach'
+  req.body.type = 'coach';
+  
+  uploadFile(req, res, function (err) {
+    const error = handleUploadError(err, req, res);
+    if (error !== null) return; // Error already handled
+    
+    const fileUrl = `/assets/coaches/${req.file.filename}`;
+    sendSuccessResponse(req, res, fileUrl, 'coach');
+  });
+};
+
+// Generic upload for backward compatibility
 export const uploadMedia = (req, res) => {
   uploadFile(req, res, function (err) {
-    if (err instanceof multer.MulterError) {
-      if (err.code === 'LIMIT_FILE_SIZE') {
-        return res.status(400).json({ 
-          status: 'error',
-          message: 'File size is too large. Max size is 200MB.'
-        });
-      }
-      return res.status(400).json({ 
-        status: 'error',
-        message: err.message 
-      });
-    } else if (err) {
-      return res.status(400).json({ 
-        status: 'error',
-        message: err.message 
-      });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({ 
-        status: 'error',
-        message: 'No file uploaded'
-      });
-    }
-
+    const error = handleUploadError(err, req, res);
+    if (error !== null) return; // Error already handled
+    
     // Determine the type of upload
     const type = req.body.type || 'default';
     const category = req.body.category || '';
@@ -148,23 +241,6 @@ export const uploadMedia = (req, res) => {
       fileUrl = `/assets/${req.file.filename}`;
     }
     
-    // Return the URL for the uploaded file in a format compatible with both the backend and frontend
-    res.json({
-      status: 'success',
-      data: {
-        imageUrl: fileUrl,
-        message: 'File uploaded successfully',
-        filename: req.file.filename,
-        type: type,
-        category: category || undefined,
-        size: req.file.size,
-        mimetype: req.file.mimetype
-      },
-      // Add these for compatibility with different frontend expectations
-      imageUrl: fileUrl,
-      imagePath: fileUrl,
-      url: fileUrl,
-      path: fileUrl
-    });
+    sendSuccessResponse(req, res, fileUrl, type, category);
   });
 };
