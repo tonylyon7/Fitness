@@ -78,11 +78,21 @@ const handleUploadError = (err, req, res) => {
 const uploadToCloudinary = async (filePath, folder) => {
   try {
     console.log(`Uploading file to Cloudinary folder: ${folder}`);
+    console.log(`File path: ${filePath}, exists: ${fs.existsSync(filePath)}`);
     
-    // Upload the file to Cloudinary
+        // Cloudinary is now configured with hardcoded values in config/cloudinary.js
+    
+    // Log file stats before upload
+    const stats = fs.statSync(filePath);
+    console.log(`File size: ${stats.size} bytes`);
+    
+    // Upload the file to Cloudinary with timeout and retries
     const result = await cloudinary.uploader.upload(filePath, {
       folder: folder,
       resource_type: 'auto', // auto-detect whether it's an image or video
+      timeout: 120000, // 2 minute timeout
+      use_filename: true,
+      unique_filename: true
     });
 
     console.log(`Successfully uploaded to Cloudinary: ${result.secure_url}`);
@@ -97,10 +107,16 @@ const uploadToCloudinary = async (filePath, folder) => {
     };
   } catch (error) {
     console.error('Error uploading to Cloudinary:', error);
+    console.error('Error details:', error.message);
     
     // Remove the temporary file in case of error
     if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+      try {
+        fs.unlinkSync(filePath);
+        console.log('Temporary file removed after error');
+      } catch (unlinkError) {
+        console.error('Failed to remove temporary file:', unlinkError.message);
+      }
     }
     throw error;
   }

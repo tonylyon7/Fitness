@@ -194,11 +194,16 @@ const connectDB = async () => {
     const options = {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
+      serverSelectionTimeoutMS: 30000,
+      socketTimeoutMS: 60000,
+      // Use IPv4 first, then try IPv6
       family: 4,
       retryWrites: true,
-      w: 'majority'
+      w: 'majority',
+      // Add connection pool settings
+      maxPoolSize: 10,
+      minPoolSize: 5,
+      maxIdleTimeMS: 30000
     };
 
     await mongoose.connect(mongoUri, options);
