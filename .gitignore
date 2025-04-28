@@ -37,9 +37,3 @@ coverage
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-
-# Assets and uploads
-assets/
-assets/profileimage/
-assets/postimage/
-Thumbs.db

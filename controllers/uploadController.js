@@ -2,81 +2,26 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
+import cloudinary from '../config/cloudinary.js';
 
 // Get current directory name
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Create assets directory if it doesn't exist
-const assetsDir = path.join(__dirname, '../assets');
-if (!fs.existsSync(assetsDir)) {
-  fs.mkdirSync(assetsDir, { recursive: true });
+// Create temp directory for multer to store files temporarily before uploading to Cloudinary
+const tempDir = path.join(__dirname, '../temp');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
 }
 
-// Create profile images directory if it doesn't exist
-const profileImagesDir = path.join(assetsDir, 'profileimage');
-if (!fs.existsSync(profileImagesDir)) {
-  fs.mkdirSync(profileImagesDir, { recursive: true });
-}
-
-// Create post images directory if it doesn't exist
-const postImagesDir = path.join(assetsDir, 'postimage');
-if (!fs.existsSync(postImagesDir)) {
-  fs.mkdirSync(postImagesDir, { recursive: true });
-}
-
-// Create product images directories if they don't exist
-const productImagesDir = path.join(assetsDir, 'products');
-if (!fs.existsSync(productImagesDir)) {
-  fs.mkdirSync(productImagesDir, { recursive: true });
-}
-
-// Create product category subdirectories
-const productCategories = ['equipment', 'supplements', 'apparel', 'accessories'];
-productCategories.forEach(category => {
-  const categoryDir = path.join(productImagesDir, category);
-  if (!fs.existsSync(categoryDir)) {
-    fs.mkdirSync(categoryDir, { recursive: true });
-  }
-});
-
-// Create coaches directory if it doesn't exist
-const coachesImagesDir = path.join(assetsDir, 'coaches');
-if (!fs.existsSync(coachesImagesDir)) {
-  fs.mkdirSync(coachesImagesDir, { recursive: true });
-}
-
-// Configure multer for file upload
+// Configure multer to use temporary storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Determine the destination directory based on the upload type
-    const type = req.body.type || 'default';
-    const category = req.body.category || '';
-    
-    if (type === 'profile') {
-      cb(null, profileImagesDir);
-    } else if (type === 'post') {
-      cb(null, postImagesDir);
-    } else if (type === 'product') {
-      // If a valid category is provided, use the category subdirectory
-      if (category && productCategories.includes(category)) {
-        cb(null, path.join(productImagesDir, category));
-      } else {
-        cb(null, productImagesDir);
-      }
-    } else if (type === 'coach') {
-      cb(null, coachesImagesDir);
-    } else {
-      cb(null, assetsDir);
-    }
+    cb(null, tempDir);
   },
   filename: function (req, file, cb) {
-    // Get the upload type and use it as a prefix
-    const type = req.body.type || 'default';
-    
-    // Create unique filename with type prefix, timestamp and original extension
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, `${type}_${uniqueSuffix}${path.extname(file.originalname)}`);
+    cb(null, `temp_${uniqueSuffix}${path.extname(file.originalname)}`);
   }
 });
 
@@ -129,118 +74,181 @@ const handleUploadError = (err, req, res) => {
   return null; // No error
 };
 
+// Function to upload file to Cloudinary
+const uploadToCloudinary = async (filePath, folder) => {
+  try {
+    console.log(`Uploading file to Cloudinary folder: ${folder}`);
+    
+    // Upload the file to Cloudinary
+    const result = await cloudinary.uploader.upload(filePath, {
+      folder: folder,
+      resource_type: 'auto', // auto-detect whether it's an image or video
+    });
+
+    console.log(`Successfully uploaded to Cloudinary: ${result.secure_url}`);
+
+    // Remove the temporary file
+    fs.unlinkSync(filePath);
+
+    return {
+      url: result.secure_url,
+      public_id: result.public_id,
+      resource_type: result.resource_type
+    };
+  } catch (error) {
+    console.error('Error uploading to Cloudinary:', error);
+    
+    // Remove the temporary file in case of error
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
+    }
+    throw error;
+  }
+};
+
 // Generic success response for uploads
-const sendSuccessResponse = (req, res, fileUrl, type, category) => {
+const sendSuccessResponse = (res, cloudinaryResult, type, category) => {
   res.json({
     status: 'success',
     data: {
-      imageUrl: fileUrl,
-      message: 'File uploaded successfully',
-      filename: req.file.filename,
+      imageUrl: cloudinaryResult.url,
+      message: 'File uploaded successfully to cloud storage',
       type: type,
       category: category || undefined,
-      size: req.file.size,
-      mimetype: req.file.mimetype
+      public_id: cloudinaryResult.public_id,
+      resource_type: cloudinaryResult.resource_type
     },
     // Add these for compatibility with different frontend expectations
-    imageUrl: fileUrl,
-    imagePath: fileUrl,
-    url: fileUrl,
-    path: fileUrl
+    imageUrl: cloudinaryResult.url,
+    imagePath: cloudinaryResult.url,
+    url: cloudinaryResult.url,
+    path: cloudinaryResult.url
   });
 };
 
 // Upload profile image
-export const uploadProfileImage = (req, res) => {
+export const uploadProfileImage = async (req, res) => {
   // Force the type to be 'profile'
   req.body.type = 'profile';
   
-  uploadFile(req, res, function (err) {
-    const error = handleUploadError(err, req, res);
-    if (error !== null) return; // Error already handled
-    
-    const fileUrl = `/assets/profileimage/${req.file.filename}`;
-    sendSuccessResponse(req, res, fileUrl, 'profile');
+  uploadFile(req, res, async function (err) {
+    try {
+      const error = handleUploadError(err, req, res);
+      if (error !== null) return; // Error already handled
+      
+      const cloudinaryResult = await uploadToCloudinary(req.file.path, 'fitness/profiles');
+      sendSuccessResponse(res, cloudinaryResult, 'profile');
+    } catch (error) {
+      console.error('Error uploading to Cloudinary:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to upload image to cloud storage'
+      });
+    }
   });
 };
 
 // Upload post image/video
-export const uploadPostMedia = (req, res) => {
+export const uploadPostMedia = async (req, res) => {
   // Force the type to be 'post'
   req.body.type = 'post';
   
-  uploadFile(req, res, function (err) {
-    const error = handleUploadError(err, req, res);
-    if (error !== null) return; // Error already handled
-    
-    const fileUrl = `/assets/postimage/${req.file.filename}`;
-    sendSuccessResponse(req, res, fileUrl, 'post');
+  uploadFile(req, res, async function (err) {
+    try {
+      const error = handleUploadError(err, req, res);
+      if (error !== null) return; // Error already handled
+      
+      const cloudinaryResult = await uploadToCloudinary(req.file.path, 'fitness/posts');
+      sendSuccessResponse(res, cloudinaryResult, 'post');
+    } catch (error) {
+      console.error('Error uploading to Cloudinary:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to upload media to cloud storage'
+      });
+    }
   });
 };
 
 // Upload product image
-export const uploadProductImage = (req, res) => {
+export const uploadProductImage = async (req, res) => {
   // Force the type to be 'product'
   req.body.type = 'product';
   const category = req.body.category || '';
   
-  uploadFile(req, res, function (err) {
-    const error = handleUploadError(err, req, res);
-    if (error !== null) return; // Error already handled
-    
-    let fileUrl;
-    if (category && productCategories.includes(category)) {
-      fileUrl = `/assets/products/${category}/${req.file.filename}`;
-    } else {
-      fileUrl = `/assets/products/${req.file.filename}`;
+  uploadFile(req, res, async function (err) {
+    try {
+      const error = handleUploadError(err, req, res);
+      if (error !== null) return; // Error already handled
+      
+      const folder = category ? `fitness/products/${category}` : 'fitness/products';
+      const cloudinaryResult = await uploadToCloudinary(req.file.path, folder);
+      sendSuccessResponse(res, cloudinaryResult, 'product', category);
+    } catch (error) {
+      console.error('Error uploading to Cloudinary:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to upload image to cloud storage'
+      });
     }
-    
-    sendSuccessResponse(req, res, fileUrl, 'product', category);
   });
 };
 
 // Upload coach image
-export const uploadCoachImage = (req, res) => {
+export const uploadCoachImage = async (req, res) => {
   // Force the type to be 'coach'
   req.body.type = 'coach';
   
-  uploadFile(req, res, function (err) {
-    const error = handleUploadError(err, req, res);
-    if (error !== null) return; // Error already handled
-    
-    const fileUrl = `/assets/coaches/${req.file.filename}`;
-    sendSuccessResponse(req, res, fileUrl, 'coach');
+  uploadFile(req, res, async function (err) {
+    try {
+      const error = handleUploadError(err, req, res);
+      if (error !== null) return; // Error already handled
+      
+      const cloudinaryResult = await uploadToCloudinary(req.file.path, 'fitness/coaches');
+      sendSuccessResponse(res, cloudinaryResult, 'coach');
+    } catch (error) {
+      console.error('Error uploading to Cloudinary:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to upload image to cloud storage'
+      });
+    }
   });
 };
 
 // Generic upload for backward compatibility
-export const uploadMedia = (req, res) => {
-  uploadFile(req, res, function (err) {
-    const error = handleUploadError(err, req, res);
-    if (error !== null) return; // Error already handled
-    
-    // Determine the type of upload
-    const type = req.body.type || 'default';
-    const category = req.body.category || '';
-    
-    // Construct the appropriate URL path based on the upload type
-    let fileUrl;
-    if (type === 'profile') {
-      fileUrl = `/assets/profileimage/${req.file.filename}`;
-    } else if (type === 'post') {
-      fileUrl = `/assets/postimage/${req.file.filename}`;
-    } else if (type === 'product') {
-      if (category && productCategories.includes(category)) {
-        fileUrl = `/assets/products/${category}/${req.file.filename}`;
+export const uploadMedia = async (req, res) => {
+  uploadFile(req, res, async function (err) {
+    try {
+      const error = handleUploadError(err, req, res);
+      if (error !== null) return; // Error already handled
+      
+      // Determine the type of upload
+      const type = req.body.type || 'default';
+      const category = req.body.category || '';
+      
+      // Determine the appropriate Cloudinary folder
+      let folder;
+      if (type === 'profile') {
+        folder = 'fitness/profiles';
+      } else if (type === 'post') {
+        folder = 'fitness/posts';
+      } else if (type === 'product') {
+        folder = category ? `fitness/products/${category}` : 'fitness/products';
+      } else if (type === 'coach') {
+        folder = 'fitness/coaches';
       } else {
-        fileUrl = `/assets/products/${req.file.filename}`;
+        folder = 'fitness/general';
       }
-    } else if (type === 'coach') {
-      fileUrl = `/assets/coaches/${req.file.filename}`;
-    } else {
-      fileUrl = `/assets/${req.file.filename}`;
+      
+      const cloudinaryResult = await uploadToCloudinary(req.file.path, folder);
+      sendSuccessResponse(res, cloudinaryResult, type, category);
+    } catch (error) {
+      console.error('Error uploading to Cloudinary:', error);
+      res.status(500).json({
+        status: 'error',
+        message: 'Failed to upload media to cloud storage'
+      });
     }
-    
-    sendSuccessResponse(req, res, fileUrl, type, category);
   });
 };
