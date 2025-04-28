@@ -80,25 +80,50 @@ const uploadToCloudinary = async (filePath, folder) => {
     console.log(`Uploading file to Cloudinary folder: ${folder}`);
     console.log(`File path: ${filePath}, exists: ${fs.existsSync(filePath)}`);
     
-        // Cloudinary is now configured with hardcoded values in config/cloudinary.js
+    // Double-check Cloudinary configuration
+    console.log('Cloudinary Configuration Check:', {
+      cloud_name: cloudinary.config().cloud_name ? 'Set' : 'Not set',
+      api_key: cloudinary.config().api_key ? 'Set' : 'Not set',
+      api_secret: cloudinary.config().api_secret ? 'Set' : 'Not set'
+    });
+    
+    // Verify file exists and is accessible
+    if (!fs.existsSync(filePath)) {
+      throw new Error(`File not found at path: ${filePath}`);
+    }
     
     // Log file stats before upload
     const stats = fs.statSync(filePath);
     console.log(`File size: ${stats.size} bytes`);
     
+    if (stats.size === 0) {
+      throw new Error('File is empty (0 bytes)');
+    }
+    
     // Upload the file to Cloudinary with timeout and retries
-    const result = await cloudinary.uploader.upload(filePath, {
+    console.log('Starting Cloudinary upload...');
+    const uploadOptions = {
       folder: folder,
       resource_type: 'auto', // auto-detect whether it's an image or video
-      timeout: 120000, // 2 minute timeout
+      timeout: 180000, // 3 minute timeout
       use_filename: true,
-      unique_filename: true
-    });
+      unique_filename: true,
+      overwrite: true
+    };
+    
+    console.log('Upload options:', uploadOptions);
+    const result = await cloudinary.uploader.upload(filePath, uploadOptions);
 
     console.log(`Successfully uploaded to Cloudinary: ${result.secure_url}`);
 
     // Remove the temporary file
-    fs.unlinkSync(filePath);
+    try {
+      fs.unlinkSync(filePath);
+      console.log('Temporary file removed after successful upload');
+    } catch (unlinkError) {
+      console.error('Failed to remove temporary file after successful upload:', unlinkError.message);
+      // Continue despite file removal error
+    }
 
     return {
       url: result.secure_url,
@@ -108,6 +133,7 @@ const uploadToCloudinary = async (filePath, folder) => {
   } catch (error) {
     console.error('Error uploading to Cloudinary:', error);
     console.error('Error details:', error.message);
+    console.error('Error stack:', error.stack);
     
     // Remove the temporary file in case of error
     if (fs.existsSync(filePath)) {
@@ -171,16 +197,37 @@ export const uploadPostMedia = async (req, res) => {
   
   uploadFile(req, res, async function (err) {
     try {
+      console.log('Upload post media request received');
+      console.log('Request body:', req.body);
+      console.log('Request files:', req.file ? 'File received' : 'No file received');
+      
       const error = handleUploadError(err, req, res);
       if (error !== null) return; // Error already handled
       
+      if (!req.file) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'No file uploaded or file upload failed'
+        });
+      }
+      
+      console.log('File details:', {
+        filename: req.file.filename,
+        path: req.file.path,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      });
+      
       const cloudinaryResult = await uploadToCloudinary(req.file.path, 'fitness/posts');
+      console.log('Cloudinary upload successful:', cloudinaryResult);
       sendSuccessResponse(res, cloudinaryResult, 'post');
     } catch (error) {
       console.error('Error uploading to Cloudinary:', error);
+      console.error('Error stack:', error.stack);
       res.status(500).json({
         status: 'error',
-        message: 'Failed to upload media to cloud storage'
+        message: 'Failed to upload media to cloud storage',
+        details: error.message
       });
     }
   });
@@ -236,12 +283,32 @@ export const uploadCoachImage = async (req, res) => {
 export const uploadMedia = async (req, res) => {
   uploadFile(req, res, async function (err) {
     try {
+      console.log('Generic upload request received');
+      console.log('Request headers:', req.headers);
+      console.log('Request body:', req.body);
+      console.log('Request files:', req.file ? 'File received' : 'No file received');
+      
       const error = handleUploadError(err, req, res);
       if (error !== null) return; // Error already handled
+      
+      if (!req.file) {
+        return res.status(400).json({
+          status: 'error',
+          message: 'No file uploaded or file upload failed'
+        });
+      }
+      
+      console.log('File details:', {
+        filename: req.file.filename,
+        path: req.file.path,
+        size: req.file.size,
+        mimetype: req.file.mimetype
+      });
       
       // Determine the type of upload
       const type = req.body.type || 'default';
       const category = req.body.category || '';
+      console.log(`Upload type: ${type}, category: ${category}`);
       
       // Determine the appropriate Cloudinary folder
       let folder;
@@ -257,13 +324,17 @@ export const uploadMedia = async (req, res) => {
         folder = 'fitness/general';
       }
       
+      console.log(`Using Cloudinary folder: ${folder}`);
       const cloudinaryResult = await uploadToCloudinary(req.file.path, folder);
+      console.log('Cloudinary upload successful:', cloudinaryResult);
       sendSuccessResponse(res, cloudinaryResult, type, category);
     } catch (error) {
       console.error('Error uploading to Cloudinary:', error);
+      console.error('Error stack:', error.stack);
       res.status(500).json({
         status: 'error',
-        message: 'Failed to upload media to cloud storage'
+        message: 'Failed to upload media to cloud storage',
+        details: error.message
       });
     }
   });
